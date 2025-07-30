@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Météo Reims & Alentours</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #457fca 0%, #5691c8 100%); min-height: 100vh; color: #fff; }
+        .container { max-width: 600px; margin: 0 auto; padding: 30px 15px; }
+        header { text-align: center; margin-bottom: 40px; }
+        header h1 { font-size: 2.5em; font-weight: 700; margin-bottom: 5px; }
+        header p { font-size: 1.2em; color: #cce3fa; }
+        .current-weather { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.10); border-radius: 18px; padding: 25px; margin-bottom: 32px; box-shadow: 0 4px 18px rgba(69,127,202,0.10);}
+        .current-weather .infos { flex: 1; }
+        .current-weather .temp { font-size: 3em; font-weight: bold; }
+        .current-weather .desc { font-size: 1.1em; color: #cce3fa; margin-top: 4px; }
+        .current-weather .icon { font-size: 4em; }
+        .forecast { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 12px; }
+        .forecast-title { font-size: 1.2em; font-weight: 600; margin-bottom: 12px; }
+        .forecast-list { display: flex; overflow-x: auto; gap: 22px; padding-bottom: 8px; scrollbar-width: thin;}
+        .forecast-hour { background: rgba(255,255,255,0.12); border-radius: 10px; min-width: 78px; padding: 10px 8px; text-align: center;}
+        .forecast-hour .hour { font-weight: 500; }
+        .forecast-hour .icon { font-size: 2em; margin: 4px 0; }
+        .forecast-hour .temp { font-size: 1.1em; font-weight: 600;}
+        @media (max-width: 520px) {
+            header h1 { font-size: 2em; }
+            .container { padding: 16px 2px; }
+            .current-weather { flex-direction: column; align-items: flex-start; }
+            .current-weather .icon { margin-top: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Météo Reims & Alentours</h1>
+            <p>Prévisions en temps réel</p>
+        </header>
+        <section class="current-weather">
+            <div class="infos">
+                <div class="temp" id="tempNow">--°C</div>
+                <div class="desc" id="weatherDesc">Chargement...</div>
+                <div class="city">Reims, France</div>
+            </div>
+            <div class="icon" id="weatherIcon">⛅</div>
+        </section>
+        <section class="forecast">
+            <div class="forecast-title">Prochaines heures</div>
+            <div class="forecast-list" id="forecastList"></div>
+        </section>
+    </div>
+    <script>
+        // Coordonnées de Reims
+        const lat = 49.2628;
+        const lon = 4.0347;
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,weathercode&current_weather=true&timezone=Europe%2FParis`)
+        .then(response => response.json())
+        .then(data => {
+            // Données actuelles
+            const temp = Math.round(data.current_weather.temperature);
+            const weatherCode = data.current_weather.weathercode;
+            document.getElementById('tempNow').innerText = temp + "°C";
+            document.getElementById('weatherDesc').innerText = weatherCodeToDesc(weatherCode);
+            document.getElementById('weatherIcon').innerText = weatherCodeToIcon(weatherCode);
+
+            // Prévisions horaires
+            const hours = data.hourly.time;
+            const temps = data.hourly.temperature_2m;
+            const codes = data.hourly.weathercode;
+            let html = '';
+            const now = new Date();
+            let startHour = now.getHours();
+            for (let i = 0, shown = 0; i < hours.length && shown < 6; i++) {
+                let hourDate = new Date(hours[i]);
+                if (hourDate > now && hourDate.getHours() !== startHour) {
+                    html += `<div class="forecast-hour">
+                        <div class="hour">${hourDate.getHours()}h</div>
+                        <div class="icon">${weatherCodeToIcon(codes[i])}</div>
+                        <div class="temp">${Math.round(temps[i])}C</div>
+                    </div>`;
+                    shown++;
+                }
+            }
+            document.getElementById('forecastList').innerHTML = html;
+        });
+
+        function weatherCodeToIcon(code) {
+            if (code === 0) return '☀️';
+            if (code === 1 || code === 2) return '🌤️';
+            if (code === 3) return '☁️';
+            if (code >= 45 && code <= 48) return '🌫️';
+            if (code >= 51 && code <= 67) return '🌦️';
+            if (code >= 71 && code <= 77) return '❄️';
+            if (code >= 80 && code <= 82) return '🌧️';
+            if (code >= 95 && code <= 99) return '⛈️';
+            return '❔';
+        }
+        function weatherCodeToDesc(code) {
+            if (code === 0) return "Ensoleillé";
+            if (code === 1) return "Principalement clair";
+            if (code === 2) return "Partiellement nuageux";
+            if (code === 3) return "Couvert";
+            if (code >= 45 && code <= 48) return "Brouillard";
+            if (code >= 51 && code <= 67) return "Bruine / Pluie fine";
+            if (code >= 71 && code <= 77) return "Chutes de neige";
+            if (code >= 80 && code <= 82) return "Averses";
+            if (code >= 95 && code <= 99) return "Orages";
+            return "Indisponible";
+        }
+    </script>
+</body>
+</html>
